@@ -1,11 +1,11 @@
 package api
 
 import (
-	"context"
-	"fmt"
+	"errors"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/mohitmilindthakur/hotel-api/db"
+	"github.com/mohitmilindthakur/hotel-api/types"
 )
 
 type UserHandler struct {
@@ -20,16 +20,34 @@ func NewUserHandler(userStore db.UserStore) *UserHandler {
 
 func (h *UserHandler) GetUserById(c *fiber.Ctx) error {
 	id := c.Params("id")
-	ctx := context.Background()
-
-	fmt.Println(id)
-	user, err := h.userStore.GetUserById(ctx, id)
+	if len(id) == 0 {
+		return errors.New("validation error")
+	}
+	user, err := h.userStore.GetUserById(c.Context(), id)
 	if err != nil {
 		return err
 	}
 	return c.JSON(user)
 }
 
-func HandleGetUsers(c *fiber.Ctx) error {
-	return c.JSON([]int{1, 2, 3, 4, 5})
+func (h *UserHandler) GetUsers(c *fiber.Ctx) error {
+	users, err := h.userStore.GetUsers(c.Context())
+	if err != nil {
+		return err
+	}
+	return c.JSON(users)
+}
+
+func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
+	var userPayload types.CreateUserParams
+	c.BodyParser(&userPayload)
+	user, valid := types.NewUserFromParams(userPayload)
+	if !valid {
+		return errors.New("validation error")
+	}
+	insertedUser, err := h.userStore.CreateUser(c.Context(), user)
+	if err != nil {
+		return err
+	}
+	return c.JSON(*insertedUser)
 }

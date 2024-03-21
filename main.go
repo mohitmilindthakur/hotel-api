@@ -17,6 +17,7 @@ const dburi = "mongodb://localhost:27017"
 var config = fiber.Config{
 	// Override default error handler
 	ErrorHandler: func(c *fiber.Ctx, err error) error {
+		c.Status(400)
 		return c.JSON(map[string]string{"error": err.Error()})
 	},
 }
@@ -36,7 +37,8 @@ func main() {
 	app := fiber.New(config)
 	apiv1 := app.Group("/api/v1")
 	apiv1.Get("/user/:id", userHandler.GetUserById)
-	apiv1.Get("/users", api.HandleGetUsers)
+	apiv1.Get("/users", userHandler.GetUsers)
+	apiv1.Post("/user", userHandler.CreateUser)
 
 	app.Listen(port)
 }
