@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/mohitmilindthakur/hotel-api/types"
@@ -16,6 +17,8 @@ type UserStore interface {
 	GetUserById(context.Context, string) (*types.User, error)
 	GetUsers(context.Context) (*[]types.User, error)
 	CreateUser(context.Context, *types.User) (*types.User, error)
+	DeleteUser(context.Context, string) error
+	UpdateUser(context.Context, string, any) error
 }
 
 type MongoUserStore struct {
@@ -66,4 +69,43 @@ func (s *MongoUserStore) CreateUser(ctx context.Context, user *types.User) (*typ
 	id := res.InsertedID
 	user.ID = id.(primitive.ObjectID)
 	return user, nil
+}
+
+func (s *MongoUserStore) DeleteUser(ctx context.Context, id string) error {
+	if id == "" {
+		return errors.New("empty Id")
+	}
+	objId, err := ToObjectID(id)
+	if err != nil {
+		return err
+	}
+	res, err := s.coll.DeleteOne(ctx, bson.M{"_id": objId})
+	fmt.Println(res)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *MongoUserStore) UpdateUser(ctx context.Context, id string, obj interface{}) error {
+	if id == "" {
+		return errors.New("empty id")
+	}
+
+	objId, err := ToObjectID(id)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("update", obj)
+	res, err := s.coll.UpdateOne(ctx, bson.M{"_id": objId}, bson.M{"$set": obj})
+
+	if err != nil {
+		return err
+	}
+
+	if res.MatchedCount == 0 {
+		return errors.New("not found")
+	}
+	return nil
 }

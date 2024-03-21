@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/mohitmilindthakur/hotel-api/db"
 	"github.com/mohitmilindthakur/hotel-api/types"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type UserHandler struct {
@@ -25,6 +26,12 @@ func (h *UserHandler) GetUserById(c *fiber.Ctx) error {
 	}
 	user, err := h.userStore.GetUserById(c.Context(), id)
 	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return c.JSON(map[string]interface{}{
+				"success": false,
+				"message": "Not found",
+			})
+		}
 		return err
 	}
 	return c.JSON(user)
@@ -50,4 +57,30 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 		return err
 	}
 	return c.JSON(*insertedUser)
+}
+
+func (h *UserHandler) DeleteUser(c *fiber.Ctx) error {
+	id := c.Params("id")
+	if id == "" {
+		return errors.New("empty ID")
+	}
+	err := h.userStore.DeleteUser(c.Context(), id)
+	if err != nil {
+		return err
+	}
+	return c.JSON(map[string]bool{"success": true})
+}
+
+func (h *UserHandler) UpdateUser(c *fiber.Ctx) error {
+	id := c.Params("id")
+	if id == "" {
+		return errors.New("empty id")
+	}
+	var user interface{}
+	c.BodyParser(&user)
+	err := h.userStore.UpdateUser(c.Context(), id, user)
+	if err != nil {
+		return err
+	}
+	return c.JSON(map[string]bool{"success": true})
 }
